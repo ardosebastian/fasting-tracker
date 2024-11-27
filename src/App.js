@@ -1,3 +1,7 @@
+import React, { useState, useEffect } from 'react';
+
+function App() {
+
 const DAYS_IN_WEEK = 7;
 const MAX_WEEKS = 3;
 
@@ -119,3 +123,6 @@ function App() {
     </div>
   );
 }
+
+
+export default App;
