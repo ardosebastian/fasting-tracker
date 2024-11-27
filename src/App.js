@@ -1,88 +1,121 @@
-import React, { useState, useEffect } from 'react';
+const DAYS_IN_WEEK = 7;
+const MAX_WEEKS = 3;
 
-function App() {
-const [startTime, setStartTime] = useState(null);
-const [endTime, setEndTime] = useState(null);
-const [isRunning, setIsRunning] = useState(false);
-const [elapsedTime, setElapsedTime] = useState(0);
-
-useEffect(() => {
-  let intervalId;
-  if (isRunning) {
-    intervalId = setInterval(() => {
-      const now = new Date().getTime();
-      const elapsed = now - startTime;
-      setElapsedTime(elapsed);
-    }, 1000);
-  }
-  return () => clearInterval(intervalId);
-}, [isRunning, startTime]);
-
-const startFasting = () => {
-  const now = new Date().getTime();
-  setStartTime(now);
-  setIsRunning(true);
-  setEndTime(null);
-};
-
-const stopFasting = () => {
-  const now = new Date().getTime();
-  setEndTime(now);
-  setIsRunning(false);
-};
-
-const formatTime = (ms) => {
-  const seconds = Math.floor((ms / 1000) % 60);
-  const minutes = Math.floor((ms / (1000 * 60)) % 60);
-  const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
-
-  return `${hours.toString().padStart(2, '0')}:${minutes
-    .toString()
-    .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-};
-
-return (
-  <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
-    <div className="relative py-3 sm:max-w-xl sm:mx-auto">
-      <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-light-blue-500 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl"></div>
-      <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
-        <div className="max-w-md mx-auto">
-          <div className="divide-y divide-gray-200">
-            <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
-              <h1 className="text-3xl font-bold text-center mb-8">Fasting Tracker</h1>
-              <div className="text-center text-4xl font-mono mb-8">
-                {isRunning ? formatTime(elapsedTime) : '00:00:00'}
-              </div>
-              <div className="flex justify-center space-x-4">
-                {!isRunning ? (
-                  <button
-                    onClick={startFasting}
-                    className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600"
-                  >
-                    Start Fasting
-                  </button>
-                ) : (
-                  <button
-                    onClick={stopFasting}
-                    className="bg-red-500 text-white px-6 py-2 rounded-lg hover:bg-red-600"
-                  >
-                    Stop Fasting
-                  </button>
-                )}
-              </div>
-              {endTime && (
-                <div className="text-center mt-4">
-                  <p>Total Fasting Time:</p>
-                  <p className="font-bold">{formatTime(endTime - startTime)}</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+// Reusable Components
+const StatBox = ({ label, value, emoji }) => (
+  <div className="bg-gray-50 p-2 rounded text-center">
+    <div className="text-sm text-gray-600">{emoji} {label}</div>
+    <div className="font-bold text-lg">{value}</div>
   </div>
 );
-}
 
-export default App;
+const DayButton = ({ day, status, onClick }) => {
+  const statusClasses = {
+    completed: 'bg-green-500 text-white border-green-600',
+    frosty: 'bg-blue-500 text-white border-blue-600',
+    noshow: 'bg-red-500 text-white border-red-600',
+    incomplete: 'bg-gray-100 border-gray-300 hover:bg-gray-200'
+  };
+
+  return (
+    <button
+      onClick={onClick}
+      className={`aspect-square rounded-lg flex items-center justify-center border-2 ${statusClasses[status]}`}
+    >
+      {day}
+    </button>
+  );
+};
+
+const WeekSelector = ({ currentWeek, onChange }) => (
+  <div className="flex items-center space-x-2 bg-white rounded-lg shadow p-1">
+    <button 
+      onClick={() => onChange(Math.max(1, currentWeek - 1))}
+      className="p-2 hover:bg-gray-100 rounded-lg"
+      disabled={currentWeek === 1}
+    >
+      ←
+    </button>
+    <div className="px-4 py-2 font-medium">Week {currentWeek}</div>
+    <button 
+      onClick={() => onChange(Math.min(MAX_WEEKS, currentWeek + 1))}
+      className="p-2 hover:bg-gray-100 rounded-lg"
+      disabled={currentWeek === MAX_WEEKS}
+    >
+      →
+    </button>
+  </div>
+);
+
+function App() {
+  const [currentWeek, setCurrentWeek] = React.useState(1);
+  const [participants, setParticipants] = React.useState([
+    {
+      id: 1,
+      name: "Ahmad",
+      stats: { target: 0, flame: 0, sweat: 0, soul: 0, frosty: 2 },
+      streaks: {},
+      frostyDays: {},
+      noShowDays: {}
+    },
+    {
+      id: 2,
+      name: "Budi",
+      stats: { target: 0, flame: 0, sweat: 0, soul: 0, frosty: 3 },
+      streaks: {},
+      frostyDays: {},
+      noShowDays: {}
+    }
+  ]);
+  const [showModal, setShowModal] = React.useState(false);
+  const [selectedDay, setSelectedDay] = React.useState(null);
+  const [selectedParticipant, setSelectedParticipant] = React.useState(null);
+  const [showExportModal, setShowExportModal] = React.useState(false);
+
+  // Rest of your component logic here...
+
+  return (
+    <div className="p-4 max-w-4xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">IF Challenge Tracker</h1>
+        <WeekSelector currentWeek={currentWeek} onChange={setCurrentWeek} />
+      </div>
+
+      <div className="space-y-6">
+        {participants.map((participant) => (
+          <div key={participant.id} className="bg-white p-4 rounded-lg shadow">
+            <div className="md:flex md:justify-between md:items-center mb-4">
+              <h2 className="text-lg font-semibold">{participant.name}</h2>
+              <div className="grid grid-cols-5 gap-2">
+                {Object.entries(participant.stats).map(([key, value]) => (
+                  <StatBox
+                    key={key}
+                    label={key.charAt(0).toUpperCase() + key.slice(1)}
+                    value={value}
+                    emoji={
+                      key === 'target' ? '🎯' :
+                      key === 'flame' ? '🔥' :
+                      key === 'sweat' ? '💦' :
+                      key === 'soul' ? '🌱' : '❄️'
+                    }
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-7 gap-2">
+              {Array.from({ length: DAYS_IN_WEEK }, (_, i) => i + 1).map((day) => (
+                <DayButton
+                  key={day}
+                  day={day}
+                  status={getDayStatus(participant, day)}
+                  onClick={() => handleDayClick(participant.id, day)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
